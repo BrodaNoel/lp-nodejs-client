@@ -28,6 +28,7 @@
   },
   "homepage": "https://github.com/BrodaNoel/lp-nodejs-client#readme",
   "dependencies": {
+    "@polkadot/api": "^15.1.1",
     "dotenv": "^16.4.7"
   }
 }
