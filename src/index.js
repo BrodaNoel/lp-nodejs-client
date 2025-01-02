@@ -1,4 +1,5 @@
 require('dotenv').config({ path: '.env' });
+const { HttpProvider } = require('@polkadot/api');
 
 const baseUrl = 'https://mainnet-rpc.chainflip.io';
 const ownerAddress = process.env.OWNER_ADDRESS;
@@ -140,7 +141,6 @@ const get = async params => {
 
     console.log('=== PRICES ===');
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
-
   } catch (error) {
     console.error('Error fetching data:', error);
   }
