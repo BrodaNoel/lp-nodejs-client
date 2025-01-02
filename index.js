@@ -1,5 +1,11 @@
+require('dotenv').config({ path: '.env' });
+
 const baseUrl = 'https://mainnet-rpc.chainflip.io';
-const ownerAddress = '';
+const ownerAddress = process.env.OWNER_ADDRESS;
+
+if (!ownerAddress) {
+  throw new Error('OWNER_ADDRESS env variable is required');
+}
 
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';

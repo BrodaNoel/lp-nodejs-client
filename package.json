@@ -4,6 +4,7 @@
   "description": "A LP NodeJS client",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,5 +26,8 @@
   "bugs": {
     "url": "https://github.com/BrodaNoel/lp-nodejs-client/issues"
   },
-  "homepage": "https://github.com/BrodaNoel/lp-nodejs-client#readme"
+  "homepage": "https://github.com/BrodaNoel/lp-nodejs-client#readme",
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
 }
