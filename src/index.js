@@ -1,5 +1,7 @@
 require('dotenv').config({ path: '.env' });
-const { HttpProvider } = require('@polkadot/api');
+const { HttpProvider, Keyring } = require('@polkadot/api');
+const { ApiPromise } = require('@polkadot/api/promise');
+const { cryptoWaitReady } = require('@polkadot/util-crypto');
 
 const baseUrl = 'https://mainnet-rpc.chainflip.io';
 const ownerAddress = process.env.OWNER_ADDRESS;
@@ -58,7 +60,7 @@ function hexQuantityToQuantity(hex, decimals_of_quote_asset) {
 const orderParser = x =>
   console.log(`ID ${x.id}
 TICK ${x.tick}      ${YELLOW}${tickToPrice(x.tick, 6, 6)}${RESET}
-SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6, 6)}${RESET}
+SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
 SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
 
 const get = async params => {
@@ -141,7 +143,39 @@ const get = async params => {
 
     console.log('=== PRICES ===');
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
+
+    const provider = new HttpProvider(baseUrl);
+    const api = new ApiPromise({ provider });
+
+    console.log('Connecting to the RPC...');
+    await api.isReady;
+    console.log('Connected');
+
+    await cryptoWaitReady();
+    const keyring = new Keyring({ type: 'sr25519' });
+    const signer = keyring.addFromMnemonic(process.env.MNEMONIC);
+
+    const baseAsset = 'Usdt';
+    const quoteAsset = 'Usdc';
+    const side = 'Buy';
+    const orderId = BigInt(1);
+    const tick = priceToTick(0.996, 6, 6);
+    const sellAmount = BigInt(balances.Ethereum.USDC);
+
+    const result = await api.tx.liquidityPools
+      .setLimitOrder(
+        baseAsset,
+        quoteAsset,
+        side,
+        orderId.toString(),
+        tick.toString(),
+        sellAmount.toString()
+      )
+      .signAndSend(signer);
+
+    console.log(GREEN, 'Limit order created!', RESET);
+    console.log(result);
   } catch (error) {
-    console.error('Error fetching data:', error);
+    console.error(error);
   }
 })();
