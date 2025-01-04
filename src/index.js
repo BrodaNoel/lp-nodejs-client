@@ -1,15 +1,23 @@
 require('dotenv').config({ path: '.env' });
-const { HttpProvider, Keyring } = require('@polkadot/api');
+const { WsProvider, Keyring } = require('@polkadot/api');
 const { ApiPromise } = require('@polkadot/api/promise');
+const { hexToU8a } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
+const { logIncorrectAddress } = require('./logs');
 
-const baseUrl = 'https://mainnet-rpc.chainflip.io';
-const ownerAddress = process.env.OWNER_ADDRESS;
-
-if (!ownerAddress) {
+if (!process.env.OWNER_ADDRESS) {
   throw new Error('OWNER_ADDRESS env variable is required');
 }
 
+if (!process.env.POLKADOT_PUBLIC_KEY) {
+  throw new Error('POLKADOT_PUBLIC_KEY env variable is required');
+}
+
+if (!process.env.POLKADOT_SEED) {
+  throw new Error('POLKADOT_SEED env variable is required');
+}
+
+const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 const YELLOW = '\x1b[33m';
@@ -64,7 +72,7 @@ SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
 SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
 
 const get = async params => {
-  const response = await fetch(baseUrl, {
+  const response = await fetch('https://mainnet-rpc.chainflip.io', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -94,7 +102,7 @@ const get = async params => {
       get({
         method: 'cf_asset_balances',
         params: {
-          account_id: ownerAddress,
+          account_id: process.env.OWNER_ADDRESS,
         },
       }),
       get({
@@ -108,7 +116,7 @@ const get = async params => {
             chain: 'Ethereum',
             asset: 'USDC',
           },
-          lp: ownerAddress,
+          lp: process.env.OWNER_ADDRESS,
         },
       }),
       get({
@@ -144,7 +152,7 @@ const get = async params => {
     console.log('=== PRICES ===');
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
 
-    const provider = new HttpProvider(baseUrl);
+    const provider = new WsProvider('wss://mainnet-rpc.chainflip.io');
     const api = new ApiPromise({ provider });
 
     console.log('Connecting to the RPC...');
@@ -152,29 +160,43 @@ const get = async params => {
     console.log('Connected');
 
     await cryptoWaitReady();
-    const keyring = new Keyring({ type: 'sr25519' });
-    const signer = keyring.addFromMnemonic(process.env.MNEMONIC);
+    // await waitReady();
+
+    const keyring = new Keyring({ type: 'ed25519', ss58Format: 2112 });
+
+    const pair = keyring.addFromPair({
+      publicKey: hexToU8a(process.env.POLKADOT_PUBLIC_KEY),
+      secretKey: hexToU8a(process.env.POLKADOT_SEED),
+    });
+
+    if (pair.address === process.env.OWNER_ADDRESS) {
+      console.log(GREEN, 'Correct address', RESET);
+    } else {
+      logIncorrectAddress(pair);
+      throw new Error('Incorrect address');
+    }
+
+    if (pair.isLocked) {
+      throw new Error('Pair is locked (usual root cause: missing private key/seed)');
+    }
 
     const baseAsset = 'Usdt';
     const quoteAsset = 'Usdc';
     const side = 'Buy';
-    const orderId = BigInt(1);
-    const tick = priceToTick(0.996, 6, 6);
-    const sellAmount = BigInt(balances.Ethereum.USDC);
+    const orderId = BigInt(Date.now());
+    const tick = priceToTick(0.999, 6, 6);
+    const sellAmount = '34906520'; // 34.90652 // balances.Ethereum.USDT;
 
-    const result = await api.tx.liquidityPools
-      .setLimitOrder(
-        baseAsset,
-        quoteAsset,
-        side,
-        orderId.toString(),
-        tick.toString(),
-        sellAmount.toString()
-      )
-      .signAndSend(signer);
+    await api.tx.liquidityPools
+      .setLimitOrder(baseAsset, quoteAsset, side, orderId.toString(), tick.toString(), sellAmount)
+      .signAndSend(pair, async ({ status, dispatchError }) => {
+        console.log('callback', status, dispatchError);
+      })
+      .catch(error => {
+        console.error('Error in setLimitOrder().signAndSend()', error);
+      });
 
-    console.log(GREEN, 'Limit order created!', RESET);
-    console.log(result);
+    console.log(GREEN, 'Done!', RESET);
   } catch (error) {
     console.error(error);
   }
