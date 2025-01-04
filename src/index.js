@@ -1,6 +1,5 @@
 require('dotenv').config({ path: '.env' });
-const { WsProvider, Keyring } = require('@polkadot/api');
-const { ApiPromise } = require('@polkadot/api/promise');
+const { Keyring, WsProvider, ApiPromise } = require('@polkadot/api');
 const { hexToU8a } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
 const { logIncorrectAddress } = require('./logs');
@@ -153,7 +152,7 @@ const get = async params => {
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
 
     const provider = new WsProvider('wss://mainnet-rpc.chainflip.io');
-    const api = new ApiPromise({ provider });
+    const api = new ApiPromise({ provider, noInitWarn: true });
 
     console.log('Connecting to the RPC...');
     await api.isReady;
@@ -183,12 +182,13 @@ const get = async params => {
     const baseAsset = 'Usdt';
     const quoteAsset = 'Usdc';
     const side = 'Buy';
-    const orderId = BigInt(Date.now());
-    const tick = priceToTick(0.999, 6, 6);
-    const sellAmount = '34906520'; // 34.90652 // balances.Ethereum.USDT;
+    const orderId = BigInt(Date.now()).toString();
+    const tick = priceToTick(0.999, 6, 6).toString();
+    // Real value I have on ChainFlip: 34.90652 USDC (6 decimals?)
+    const sellAmount = '34906520';
 
     await api.tx.liquidityPools
-      .setLimitOrder(baseAsset, quoteAsset, side, orderId.toString(), tick.toString(), sellAmount)
+      .setLimitOrder(baseAsset, quoteAsset, side, orderId, tick, sellAmount)
       .signAndSend(pair, async ({ status, dispatchError }) => {
         console.log('callback', status, dispatchError);
       })
