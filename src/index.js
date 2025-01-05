@@ -66,12 +66,6 @@ function hexQuantityToQuantity(hex, decimals_of_quote_asset) {
   return Number(BigInt(hex)) / 10 ** decimals_of_quote_asset;
 }
 
-const orderParser = x =>
-  console.log(`ID ${x.id}
-TICK          ${YELLOW}${tickToPrice(x.tick, 6, 6)}${RESET}
-SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
-SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
-
 const get = async params => {
   const response = await fetch(HTTP_RPC, {
     method: 'POST',
@@ -203,12 +197,12 @@ async function setLimitOrder(base, quote, side, price, amount) {
 
     if (currentOrders.limit_orders.asks.length > 0) {
       console.log('=== ASKS (BUYING USDC) ===');
-      currentOrders.limit_orders.asks.forEach(orderParser);
+      currentOrders.limit_orders.asks.forEach(logOrder);
     }
 
     if (currentOrders.limit_orders.bids.length > 0) {
       console.log('=== BIDS (BUYING USDT) ===');
-      currentOrders.limit_orders.bids.forEach(orderParser);
+      currentOrders.limit_orders.bids.forEach(logOrder);
     }
 
     console.log('');

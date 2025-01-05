@@ -16,6 +16,12 @@ const logIncorrectPublicKey = pair => {
   console.error('Check your POLKADOT_SEED');
 };
 
+const logOrder = x =>
+  console.log(`ID ${x.id}
+TICK          ${YELLOW}${tickToPrice(x.tick, 6, 6)}${RESET}
+SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
+SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
+
 const createError = dispatchErr => {
   if (!dispatchErr) return null;
 
@@ -50,6 +56,7 @@ const wsCallback = async data => {
 module.exports = {
   logIncorrectAddress,
   logIncorrectPublicKey,
+  logOrder,
   createError,
   wsCallback,
 };
