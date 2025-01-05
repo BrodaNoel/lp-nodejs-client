@@ -193,7 +193,8 @@ const get = async params => {
     if (api.isConnected) {
       console.log('Disconnecting...');
       api.disconnect();
-      console.log(RED, 'Done with error', RESET);
     }
+
+    console.error('Done with error');
   }
 })();
