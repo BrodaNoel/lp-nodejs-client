@@ -36,8 +36,20 @@ const createError = dispatchErr => {
   );
 };
 
+const wsCallback = async data => {
+  console.log('status.type', data.status.type);
+
+  const err = createError(data.dispatchError);
+  if (err) {
+    console.error(err);
+  }
+
+  return data;
+};
+
 module.exports = {
   logIncorrectAddress,
   logIncorrectPublicKey,
   createError,
+  wsCallback,
 };

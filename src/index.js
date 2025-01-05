@@ -1,8 +1,8 @@
 require('dotenv').config({ path: '.env' });
-const { Keyring, WsProvider, ApiPromise } = require('@polkadot/api');
+const { Keyring, HttpProvider, ApiPromise } = require('@polkadot/api');
 const { u8aToHex } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
-const { logIncorrectAddress, createError } = require('./logs');
+const { logIncorrectAddress, logIncorrectPublicKey } = require('./logs');
 
 if (!process.env.OWNER_ADDRESS) {
   throw new Error('OWNER_ADDRESS env variable is required');
@@ -153,7 +153,7 @@ const get = async params => {
     console.log('=== PRICES ===');
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
 
-    const provider = new WsProvider('wss://mainnet-rpc.chainflip.io');
+    const provider = new HttpProvider('https://mainnet-rpc.chainflip.io');
     api = new ApiPromise({ provider, noInitWarn: true });
 
     console.log('Connecting to the RPC...');
@@ -184,19 +184,7 @@ const get = async params => {
 
     await api.tx.liquidityPools
       .setLimitOrder(baseAsset, quoteAsset, side, orderId, tick, sellAmount)
-      .signAndSend(pair, async ({ status, dispatchError, isFinalized }) => {
-        console.log('status.type', status.type);
-
-        const err = createError(dispatchError);
-        if (err) {
-          console.error(err);
-        }
-
-        if (isFinalized) {
-          console.log('Disconnecting...');
-          api.disconnect();
-        }
-      });
+      .signAndSend(pair);
 
     console.log(GREEN, 'Done!', RESET);
   } catch (error) {
