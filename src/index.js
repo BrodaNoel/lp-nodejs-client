@@ -16,6 +16,8 @@ if (!process.env.POLKADOT_SEED) {
   throw new Error('POLKADOT_SEED env variable is required');
 }
 
+const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
+
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
@@ -71,7 +73,7 @@ SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
 SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
 
 const get = async params => {
-  const response = await fetch('https://mainnet-rpc.chainflip.io', {
+  const response = await fetch(HTTP_RPC, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -101,7 +103,7 @@ async function getHttpServer() {
     return httpApi;
   }
 
-  const provider = new HttpProvider('https://mainnet-rpc.chainflip.io');
+  const provider = new HttpProvider(HTTP_RPC);
 
   httpApi = new ApiPromise({ provider, noInitWarn: true });
 
