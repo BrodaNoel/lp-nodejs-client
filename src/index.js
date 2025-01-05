@@ -66,7 +66,7 @@ function hexQuantityToQuantity(hex, decimals_of_quote_asset) {
 
 const orderParser = x =>
   console.log(`ID ${x.id}
-TICK ${x.tick}      ${YELLOW}${tickToPrice(x.tick, 6, 6)}${RESET}
+TICK          ${YELLOW}${tickToPrice(x.tick, 6, 6)}${RESET}
 SELL_PENDING  ${GREEN}${hexQuantityToQuantity(x.sell_amount, 6)}${RESET}
 SELL_ORIGINAL ${GREEN}${hexQuantityToQuantity(x.original_sell_amount, 6)}${RESET}`);
 
@@ -94,11 +94,73 @@ const get = async params => {
   return data.result;
 };
 
+let httpApi;
+async function getHttpServer() {
+  if (httpApi) {
+    await httpApi.isReady;
+    return httpApi;
+  }
+
+  const provider = new HttpProvider('https://mainnet-rpc.chainflip.io');
+
+  httpApi = new ApiPromise({ provider, noInitWarn: true });
+
+  console.log('Connecting to the RPC...');
+  await httpApi.isReady;
+  console.log('Connected');
+
+  return httpApi;
+}
+
+let pair;
+async function getPair() {
+  if (pair) {
+    return pair;
+  }
+
+  await cryptoWaitReady();
+
+  const keyring = new Keyring({ type: 'ed25519', ss58Format: 2112 });
+  pair = keyring.addFromUri(process.env.POLKADOT_SEED);
+
+  if (pair.address !== process.env.OWNER_ADDRESS) {
+    logIncorrectAddress(pair);
+    throw new Error('Incorrect address');
+  }
+
+  if (u8aToHex(pair.publicKey) !== process.env.POLKADOT_PUBLIC_KEY) {
+    logIncorrectPublicKey(pair);
+    throw new Error('Incorrect public key');
+  }
+
+  return pair;
+}
+
+let lastOrderId = Date.now();
+async function setLimitOrder(base, quote, side, price, amount) {
+  if (base !== 'Usdt' || quote !== 'Usdc') {
+    throw new Error('Pool not implemented. Currently only USDT/USDC is implemented');
+  }
+
+  const api = await getHttpServer();
+  const pair = await getPair();
+
+  lastOrderId++;
+  const orderId = BigInt(lastOrderId).toString();
+  const tick = priceToTick(price, 6, 6).toString();
+  const sellAmount = BigInt(amount);
+
+  await api.tx.liquidityPools
+    .setLimitOrder(base, quote, side, orderId, tick, sellAmount)
+    .signAndSend(pair);
+}
+
 (async () => {
   let api;
 
   try {
-    const i = Date.now();
+    console.log('Getting Balances, current orders, and current prices...');
+
     const [balances, currentOrders, prices] = await Promise.all([
       get({
         method: 'cf_asset_balances',
@@ -128,7 +190,6 @@ const get = async params => {
         ],
       }),
     ]);
-    console.log(Date.now() - i, 'ms');
 
     console.log('');
 
@@ -153,38 +214,42 @@ const get = async params => {
     console.log('=== PRICES ===');
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
 
-    const provider = new HttpProvider('https://mainnet-rpc.chainflip.io');
-    api = new ApiPromise({ provider, noInitWarn: true });
+    console.log('');
 
-    console.log('Connecting to the RPC...');
-    await api.isReady;
-    console.log('Connected');
+    console.log('=== STRATEGIES ===');
 
-    await cryptoWaitReady();
+    /**
+     * STRATEGY: BASIC / NON-STRATEGY
+     * POOL: USDT/USDC
+     * PRICE: Hardcoded
+     *
+     * This "strategy" just set a new limit-order in case there is some balance.
+     * The price is hardcoded
+     *
+     * Example:
+     * - If USDT balance is > 0, set an order to sell it (buy USDC).
+     * - If USDC balance is > 0, set an order to sell it (buy USDT).
+     */
 
-    const keyring = new Keyring({ type: 'ed25519', ss58Format: 2112 });
-    const pair = keyring.addFromUri(process.env.POLKADOT_SEED);
+    const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
+    const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);
 
-    if (pair.address !== process.env.OWNER_ADDRESS) {
-      logIncorrectAddress(pair);
-      throw new Error('Incorrect address');
+    if (usdtBalance > 0 || usdcBalance > 0) {
+      console.log(GREEN, 'Executing Strategy: "BASIC"', RESET);
+
+      if (usdtBalance > 0) {
+        console.log(GREEN, 'Selling USDT', RESET);
+        await setLimitOrder('Usdt', 'Usdc', 'Sell', 1.001, balances.Ethereum.USDT);
+      }
+
+      if (usdcBalance > 0) {
+        console.log(GREEN, 'Buying USDT', RESET);
+        await setLimitOrder('Usdt', 'Usdc', 'Buy', 1, balances.Ethereum.USDC);
+      }
+    } else {
+      console.log('Strategy "BASIC" was NOT executed');
+      console.log('Reason: No free balance available');
     }
-
-    if (u8aToHex(pair.publicKey) !== process.env.POLKADOT_PUBLIC_KEY) {
-      logIncorrectPublicKey(pair);
-      throw new Error('Incorrect public key');
-    }
-
-    const baseAsset = 'Usdt';
-    const quoteAsset = 'Usdc';
-    const side = 'Buy';
-    const orderId = BigInt(Date.now()).toString();
-    const tick = priceToTick(0.999, 6, 6).toString();
-    const sellAmount = BigInt(balances.Ethereum.USDC);
-
-    await api.tx.liquidityPools
-      .setLimitOrder(baseAsset, quoteAsset, side, orderId, tick, sellAmount)
-      .signAndSend(pair);
 
     console.log(GREEN, 'Done!', RESET);
   } catch (error) {
