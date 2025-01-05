@@ -15,7 +15,7 @@ A NodeJS client for handling LP
 - Run `nvm use` (or make sure to use a compatible NodeJS version. Check the `.nvmrc` file)
 - Run `npm i`
 
-# Usage
+## Usage
 
 - Run `nvm use` (to ensure you are using the correct NodeJS version)
 - Run `npm start`
