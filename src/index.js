@@ -1,8 +1,8 @@
 require('dotenv').config({ path: '.env' });
 const { Keyring, WsProvider, ApiPromise } = require('@polkadot/api');
-const { hexToU8a } = require('@polkadot/util');
+const { u8aToHex } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
-const { logIncorrectAddress } = require('./logs');
+const { logIncorrectAddress, createError } = require('./logs');
 
 if (!process.env.OWNER_ADDRESS) {
   throw new Error('OWNER_ADDRESS env variable is required');
@@ -95,6 +95,8 @@ const get = async params => {
 };
 
 (async () => {
+  let api;
+
   try {
     const i = Date.now();
     const [balances, currentOrders, prices] = await Promise.all([
@@ -152,21 +154,16 @@ const get = async params => {
     console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
 
     const provider = new WsProvider('wss://mainnet-rpc.chainflip.io');
-    const api = new ApiPromise({ provider, noInitWarn: true });
+    api = new ApiPromise({ provider, noInitWarn: true });
 
     console.log('Connecting to the RPC...');
     await api.isReady;
     console.log('Connected');
 
     await cryptoWaitReady();
-    // await waitReady();
 
     const keyring = new Keyring({ type: 'ed25519', ss58Format: 2112 });
-
-    const pair = keyring.addFromPair({
-      publicKey: hexToU8a(process.env.POLKADOT_PUBLIC_KEY),
-      secretKey: hexToU8a(process.env.POLKADOT_SEED),
-    });
+    const pair = keyring.addFromUri(process.env.POLKADOT_SEED);
 
     if (pair.address === process.env.OWNER_ADDRESS) {
       console.log(GREEN, 'Correct address', RESET);
@@ -175,8 +172,14 @@ const get = async params => {
       throw new Error('Incorrect address');
     }
 
-    if (pair.isLocked) {
-      throw new Error('Pair is locked (usual root cause: missing private key/seed)');
+    if (u8aToHex(pair.publicKey) === process.env.POLKADOT_PUBLIC_KEY) {
+      console.log(GREEN, 'Correct public key', RESET);
+    } else {
+      console.error('Incorrect generated public key');
+      console.error(`Expected: ${process.env.POLKADOT_PUBLIC_KEY}`);
+      console.error(`Generated: ${u8aToHex(pair.publicKey)}`);
+
+      throw new Error('Incorrect public key');
     }
 
     const baseAsset = 'Usdt';
@@ -184,20 +187,32 @@ const get = async params => {
     const side = 'Buy';
     const orderId = BigInt(Date.now()).toString();
     const tick = priceToTick(0.999, 6, 6).toString();
-    // Real value I have on ChainFlip: 34.90652 USDC (6 decimals?)
-    const sellAmount = '34906520';
+    const sellAmount = BigInt(balances.Ethereum.USDC);
 
     await api.tx.liquidityPools
       .setLimitOrder(baseAsset, quoteAsset, side, orderId, tick, sellAmount)
-      .signAndSend(pair, async ({ status, dispatchError }) => {
-        console.log('callback', status, dispatchError);
-      })
-      .catch(error => {
-        console.error('Error in setLimitOrder().signAndSend()', error);
+      .signAndSend(pair, async ({ status, dispatchError, isFinalized }) => {
+        console.log('status.type', status.type);
+
+        const err = createError(dispatchError);
+        if (err) {
+          console.error(err);
+        }
+
+        if (isFinalized) {
+          console.log('Disconnecting...');
+          api.disconnect();
+        }
       });
 
     console.log(GREEN, 'Done!', RESET);
   } catch (error) {
     console.error(error);
+
+    if (api.isConnected) {
+      console.log('Disconnecting...');
+      api.disconnect();
+      console.log(RED, 'Done with error', RESET);
+    }
   }
 })();
