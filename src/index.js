@@ -165,20 +165,13 @@ const get = async params => {
     const keyring = new Keyring({ type: 'ed25519', ss58Format: 2112 });
     const pair = keyring.addFromUri(process.env.POLKADOT_SEED);
 
-    if (pair.address === process.env.OWNER_ADDRESS) {
-      console.log(GREEN, 'Correct address', RESET);
-    } else {
+    if (pair.address !== process.env.OWNER_ADDRESS) {
       logIncorrectAddress(pair);
       throw new Error('Incorrect address');
     }
 
-    if (u8aToHex(pair.publicKey) === process.env.POLKADOT_PUBLIC_KEY) {
-      console.log(GREEN, 'Correct public key', RESET);
-    } else {
-      console.error('Incorrect generated public key');
-      console.error(`Expected: ${process.env.POLKADOT_PUBLIC_KEY}`);
-      console.error(`Generated: ${u8aToHex(pair.publicKey)}`);
-
+    if (u8aToHex(pair.publicKey) !== process.env.POLKADOT_PUBLIC_KEY) {
+      logIncorrectPublicKey(pair);
       throw new Error('Incorrect public key');
     }
 

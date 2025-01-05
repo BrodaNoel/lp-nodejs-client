@@ -1,20 +1,19 @@
-const RED = '\x1b[31m';
-const RESET = '\x1b[0m';
-
 const logIncorrectAddress = pair => {
-  console.log(
-    RED,
-    'The ChainFlip Address is generated from your Polkadot address, which seems to be incorrect',
-    RESET
+  console.error('Incorrect generated ChaninFlip address');
+  console.error(
+    'The ChainFlip Address is generated from your Polkadot address, which seems to be incorrect'
   );
-  console.log(RED, 'Your Polkadot address:', process.env.POLKADOT_ADDRESS, RESET);
-  console.log(
-    RED,
-    'Expected ChanFlip address generated from your Polkadot address:',
-    process.env.OWNER_ADDRESS,
-    RESET
-  );
-  console.log(RED, 'ChanFlip Address generated:', pair.address, RESET);
+  console.error('Expected:', process.env.POLKADOT_ADDRESS);
+  console.error('Generated:', pair.address);
+  console.error('Check your POLKADOT_SEED');
+};
+
+const logIncorrectPublicKey = pair => {
+  console.error('Incorrect generated public key');
+  console.error('The Public Key is generated from your Polkadot seed, which seems to be incorrect');
+  console.error('Expected:', process.env.POLKADOT_PUBLIC_KEY);
+  console.error('Generated:', u8aToHex(pair.publicKey));
+  console.error('Check your POLKADOT_SEED');
 };
 
 const createError = dispatchErr => {
@@ -39,5 +38,6 @@ const createError = dispatchErr => {
 
 module.exports = {
   logIncorrectAddress,
+  logIncorrectPublicKey,
   createError,
 };
