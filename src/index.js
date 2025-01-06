@@ -181,7 +181,7 @@ async function setLimitOrder(base, quote, side, price, amount) {
         /**
          * STRATEGY: SELL-STABLECOIN-BASIC
          * POOL: USDT/USDC
-         * PRICE: Hardcoded
+         * PRICE: Hardcoded in .env: `STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`
          */
 
         const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
