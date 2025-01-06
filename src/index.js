@@ -5,6 +5,11 @@ const { cryptoWaitReady } = require('@polkadot/util-crypto');
 const { logIncorrectAddress, logIncorrectPublicKey, logOrder } = require('./logs');
 const { hexQuantityToQuantity, priceToTick, sqrtPriceToPrice } = require('./utils');
 
+const GREEN = '\x1b[32m';
+const RESET = '\x1b[0m';
+
+console.log('Checking basic configurations...');
+
 if (!process.env.OWNER_ADDRESS) {
   throw new Error('OWNER_ADDRESS env variable is required');
 }
@@ -23,10 +28,9 @@ if (!process.env.STRATEGY) {
   );
 }
 
-const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
+console.log(GREEN, 'Basic configurations: All good', RESET);
 
-const GREEN = '\x1b[32m';
-const RESET = '\x1b[0m';
+const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
 
 const get = async params => {
   const response = await fetch(HTTP_RPC, {
@@ -113,68 +117,73 @@ async function setLimitOrder(base, quote, side, price, amount) {
     .signAndSend(pair);
 }
 
+async function getBalances() {
+  return get({
+    method: 'cf_asset_balances',
+    params: {
+      account_id: process.env.OWNER_ADDRESS,
+    },
+  });
+}
+
+async function getCurrentOrders() {
+  return get({
+    method: 'cf_pool_orders',
+    params: {
+      base_asset: {
+        chain: 'Ethereum',
+        asset: 'USDT',
+      },
+      quote_asset: {
+        chain: 'Ethereum',
+        asset: 'USDC',
+      },
+      lp: process.env.OWNER_ADDRESS,
+    },
+  });
+}
+
+async function getPrices() {
+  return get({
+    method: 'cf_pool_price_v2',
+    params: [
+      { asset: 'USDT', chain: 'Ethereum' },
+      { asset: 'USDC', chain: 'Ethereum' },
+    ],
+  });
+}
+
 (async () => {
   let api;
 
   try {
-    console.log('Getting Balances, current orders, and current prices...');
+    console.log('Starting bot...');
 
-    const [balances, currentOrders, prices] = await Promise.all([
-      get({
-        method: 'cf_asset_balances',
-        params: {
-          account_id: process.env.OWNER_ADDRESS,
-        },
-      }),
-      get({
-        method: 'cf_pool_orders',
-        params: {
-          base_asset: {
-            chain: 'Ethereum',
-            asset: 'USDT',
-          },
-          quote_asset: {
-            chain: 'Ethereum',
-            asset: 'USDC',
-          },
-          lp: process.env.OWNER_ADDRESS,
-        },
-      }),
-      get({
-        method: 'cf_pool_price_v2',
-        params: [
-          { asset: 'USDT', chain: 'Ethereum' },
-          { asset: 'USDC', chain: 'Ethereum' },
-        ],
-      }),
-    ]);
+    if (process.env.LOG_CURRENT_ORDERS === 'true') {
+      console.log('\n=== CURRENT ORDERS ===');
 
-    console.log('');
+      const currentOrders = await getCurrentOrders();
 
-    console.log('=== BALANCE ===');
-    console.log('Ethereum', 'USDC', hexQuantityToQuantity(balances.Ethereum.USDC, 6));
-    console.log('Ethereum', 'USDT', hexQuantityToQuantity(balances.Ethereum.USDT, 6));
+      if (currentOrders.limit_orders.asks.length > 0) {
+        console.log('=== ASKS (BUYING USDC) ===');
+        currentOrders.limit_orders.asks.forEach(logOrder);
+      }
 
-    console.log('');
-
-    if (currentOrders.limit_orders.asks.length > 0) {
-      console.log('=== ASKS (BUYING USDC) ===');
-      currentOrders.limit_orders.asks.forEach(logOrder);
+      if (currentOrders.limit_orders.bids.length > 0) {
+        console.log('=== BIDS (BUYING USDT) ===');
+        currentOrders.limit_orders.bids.forEach(logOrder);
+      }
     }
 
-    if (currentOrders.limit_orders.bids.length > 0) {
-      console.log('=== BIDS (BUYING USDT) ===');
-      currentOrders.limit_orders.bids.forEach(logOrder);
+    if (process.env.LOG_PRICES === 'true') {
+      console.log('\n=== PRICES ===');
+      const prices = await getPrices();
+
+      console.log(prices.base_asset.asset, 'BUY:', sqrtPriceToPrice(prices.buy, 6, 6));
+      console.log(prices.base_asset.asset, 'SELL:', sqrtPriceToPrice(prices.sell, 6, 6));
     }
 
-    console.log('');
-
-    console.log('=== PRICES ===');
-    console.log(prices.base_asset.asset, sqrtPriceToPrice(prices.buy, 6, 6));
-
-    console.log('');
-
-    console.log('=== STRATEGIES ===');
+    console.log('\n=== STRATEGIES ===');
 
     switch (process.env.STRATEGY) {
       case 'SELL-STABLECOIN-BASIC':
@@ -183,6 +192,8 @@ async function setLimitOrder(base, quote, side, price, amount) {
          * POOL: USDT/USDC
          * PRICE: Hardcoded in .env: `STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`
          */
+
+        console.log('Strategy defined: "SELL-STABLECOIN-BASIC"');
 
         const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
         const USDT_BUY_PRICE = Number(process.env.STRATEGY_USDT_BUY_PRICE);
@@ -193,6 +204,13 @@ async function setLimitOrder(base, quote, side, price, amount) {
         if (!(USDT_BUY_PRICE > 0)) {
           throw new Error(`STRATEGY_USDT_BUY_PRICE env variable should be > 0`);
         }
+
+        console.log('\n=== BALANCES ===');
+        const balances = await getBalances();
+
+        console.log('Ethereum', 'USDC', hexQuantityToQuantity(balances.Ethereum.USDC, 6));
+        console.log('Ethereum', 'USDT', hexQuantityToQuantity(balances.Ethereum.USDT, 6));
+        console.log('================\n');
 
         const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
         const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);

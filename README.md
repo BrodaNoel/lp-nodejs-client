@@ -2,6 +2,8 @@
 
 A NodeJS client for handling LP
 
+**IMPORTANT**: Currently, this bot is not a "daemon" (a process that never ends, and keep "listening"). You have to manually run it (`npm start`) every time you want it to be ran. In the near future I'll add a functionality to define how often you want your strategies to be ran, and the bot will be running them as a daemon.
+
 ## Installation / Configuration
 
 - Clone this repo
@@ -15,6 +17,12 @@ A NodeJS client for handling LP
 - [OPTIONAL] You can define an HTTP_RPC_URL in the `.env` file, otherwise `https://mainnet-rpc.chainflip.io` will be used
 - Run `nvm use` (or make sure to use a compatible NodeJS version. Check the `.nvmrc` file)
 - Run `npm i`
+
+**Extras**
+Be careful with all these extra log configurations. The more you add, the slower the script will run. If you are running a "high frecuency trading" style (strategies being run every 10 seconds or less), I would suggest you to avoid adding these logs
+
+- In your `.env` file, add `LOG_CURRENT_ORDERS=true` if you want to log in the console your current opened limit orders
+- In your `.env` file, add `LOG_PRICES=true` if you want to log in the console the current prices of USDT/USDC (more coming soon)
 
 ## Defining an Strategy
 
