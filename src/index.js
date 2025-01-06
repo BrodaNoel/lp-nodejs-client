@@ -17,6 +17,12 @@ if (!process.env.POLKADOT_SEED) {
   throw new Error('POLKADOT_SEED env variable is required');
 }
 
+if (!process.env.STRATEGY) {
+  throw new Error(
+    'STRATEGY env variable is required. Please read the README file in order to understand how to define a strategy'
+  );
+}
+
 const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
 
 const GREEN = '\x1b[32m';
@@ -170,44 +176,87 @@ async function setLimitOrder(base, quote, side, price, amount) {
 
     console.log('=== STRATEGIES ===');
 
-    /**
-     * STRATEGY: BASIC / NON-STRATEGY
-     * POOL: USDT/USDC
-     * PRICE: Hardcoded
-     *
-     * This "strategy" just set a new limit-order in case there is some balance.
-     * The price is hardcoded
-     *
-     * Example:
-     * - If USDT balance is > 0, set an order to sell it (buy USDC).
-     * - If USDC balance is > 0, set an order to sell it (buy USDT).
-     */
+    switch (process.env.STRATEGY) {
+      case 'SELL-STABLECOIN-BASIC':
+        /**
+         * STRATEGY: SELL-STABLECOIN-BASIC
+         * POOL: USDT/USDC
+         * PRICE: Semi-Hardcoded
+         *
+         * - The `SELL-STABLECOIN-BASIC` strategy is the most basic one.
+         * - This strategy just check if you have free balance on ETH:USDT or ETH:USDC, and sell it setting a limit-order.
+         * - The price to sell/buy will depend on 2 vars that you will add in your `.env` file (`STRATEGY_PIVOT_PRICE` and `STRATEGY_OFFSET_PRICE`).
+         * - The price to SELL USDT (buy USDC) will be defined as `STRATEGY_PIVOT_PRICE + STRATEGY_OFFSET_PRICE`
+         * - The price to BUY USDT (sell USDC ) will be defined as `STRATEGY_PIVOT_PRICE - STRATEGY_OFFSET_PRICE`
+         *
+         * Example: If you define `STRATEGY_PIVOT_PRICE=1` and `STRATEGY_OFFSET_PRICE=0.001`,
+         * it will SELL USDT at `1.001`, and BUY USDT at `0.999`;
+         *
+         * Example:
+         * - If USDT balance is > 0, set an order to sell it (buy USDC).
+         * - If USDC balance is > 0, set an order to sell it (buy USDT).
+         */
 
-    const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
-    const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);
+        const PIVOT_PRICE = Number(process.env.STRATEGY_PIVOT_PRICE);
+        const OFFSET_PRICE = Number(process.env.STRATEGY_OFFSET_PRICE);
 
-    if (usdtBalance > 0 || usdcBalance > 0) {
-      console.log(GREEN, 'Executing Strategy: "BASIC"', RESET);
+        if (typeof process.env.STRATEGY_PIVOT_PRICE === 'undefined') {
+          throw new Error('STRATEGY_PIVOT_PRICE env variable is required');
+        }
+        if (typeof process.env.STRATEGY_OFFSET_PRICE === 'undefined') {
+          throw new Error('STRATEGY_OFFSET_PRICE env variable is required');
+        }
+        if (!(PIVOT_PRICE > 0)) {
+          throw new Error(`STRATEGY_PIVOT_PRICE env variable should be > 0`);
+        }
+        if (!(OFFSET_PRICE >= 0)) {
+          throw new Error('OFFSET_PRICE env variable should be >= 0');
+        }
 
-      if (usdtBalance > 0) {
-        console.log(GREEN, 'Selling USDT', RESET);
-        await setLimitOrder('Usdt', 'Usdc', 'Sell', 1.001, balances.Ethereum.USDT);
-      }
+        const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
+        const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);
 
-      if (usdcBalance > 0) {
-        console.log(GREEN, 'Buying USDT', RESET);
-        await setLimitOrder('Usdt', 'Usdc', 'Buy', 0.999, balances.Ethereum.USDC);
-      }
-    } else {
-      console.log('Strategy "BASIC" was NOT executed');
-      console.log('Reason: No free balance available');
+        if (usdtBalance > 0 || usdcBalance > 0) {
+          console.log(GREEN, 'Executing Strategy: "BASIC"', RESET);
+
+          if (usdtBalance > 0) {
+            console.log(GREEN, 'Selling USDT', RESET);
+            await setLimitOrder(
+              'Usdt',
+              'Usdc',
+              'Sell',
+              PIVOT_PRICE + OFFSET_PRICE,
+              balances.Ethereum.USDT
+            );
+          }
+
+          if (usdcBalance > 0) {
+            console.log(GREEN, 'Buying USDT', RESET);
+            await setLimitOrder(
+              'Usdt',
+              'Usdc',
+              'Buy',
+              PIVOT_PRICE - OFFSET_PRICE,
+              balances.Ethereum.USDC
+            );
+          }
+        } else {
+          console.log('Strategy "SELL-STABLECOIN-BASIC" was NOT executed');
+          console.log('Reason: No free balance available');
+        }
+        break;
+
+      default:
+        throw new Error(
+          'The strategy defined as STRATEGY in the env file, is not a valid strategy'
+        );
     }
 
     console.log(GREEN, 'Done!', RESET);
   } catch (error) {
     console.error(error);
 
-    if (api.isConnected) {
+    if (api && api.isConnected) {
       console.log('Disconnecting...');
       api.disconnect();
     }
