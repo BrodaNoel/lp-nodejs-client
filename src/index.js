@@ -181,36 +181,17 @@ async function setLimitOrder(base, quote, side, price, amount) {
         /**
          * STRATEGY: SELL-STABLECOIN-BASIC
          * POOL: USDT/USDC
-         * PRICE: Semi-Hardcoded
-         *
-         * - The `SELL-STABLECOIN-BASIC` strategy is the most basic one.
-         * - This strategy just check if you have free balance on ETH:USDT or ETH:USDC, and sell it setting a limit-order.
-         * - The price to sell/buy will depend on 2 vars that you will add in your `.env` file (`STRATEGY_PIVOT_PRICE` and `STRATEGY_OFFSET_PRICE`).
-         * - The price to SELL USDT (buy USDC) will be defined as `STRATEGY_PIVOT_PRICE + STRATEGY_OFFSET_PRICE`
-         * - The price to BUY USDT (sell USDC ) will be defined as `STRATEGY_PIVOT_PRICE - STRATEGY_OFFSET_PRICE`
-         *
-         * Example: If you define `STRATEGY_PIVOT_PRICE=1` and `STRATEGY_OFFSET_PRICE=0.001`,
-         * it will SELL USDT at `1.001`, and BUY USDT at `0.999`;
-         *
-         * Example:
-         * - If USDT balance is > 0, set an order to sell it (buy USDC).
-         * - If USDC balance is > 0, set an order to sell it (buy USDT).
+         * PRICE: Hardcoded
          */
 
-        const PIVOT_PRICE = Number(process.env.STRATEGY_PIVOT_PRICE);
-        const OFFSET_PRICE = Number(process.env.STRATEGY_OFFSET_PRICE);
+        const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
+        const USDT_BUY_PRICE = Number(process.env.STRATEGY_USDT_BUY_PRICE);
 
-        if (typeof process.env.STRATEGY_PIVOT_PRICE === 'undefined') {
-          throw new Error('STRATEGY_PIVOT_PRICE env variable is required');
+        if (!(USDT_SELL_PRICE > 0)) {
+          throw new Error(`STRATEGY_USDT_SELL_PRICE env variable should be > 0`);
         }
-        if (typeof process.env.STRATEGY_OFFSET_PRICE === 'undefined') {
-          throw new Error('STRATEGY_OFFSET_PRICE env variable is required');
-        }
-        if (!(PIVOT_PRICE > 0)) {
-          throw new Error(`STRATEGY_PIVOT_PRICE env variable should be > 0`);
-        }
-        if (!(OFFSET_PRICE >= 0)) {
-          throw new Error('OFFSET_PRICE env variable should be >= 0');
+        if (!(USDT_BUY_PRICE > 0)) {
+          throw new Error(`STRATEGY_USDT_BUY_PRICE env variable should be > 0`);
         }
 
         const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
@@ -221,24 +202,12 @@ async function setLimitOrder(base, quote, side, price, amount) {
 
           if (usdtBalance > 0) {
             console.log(GREEN, 'Selling USDT', RESET);
-            await setLimitOrder(
-              'Usdt',
-              'Usdc',
-              'Sell',
-              PIVOT_PRICE + OFFSET_PRICE,
-              balances.Ethereum.USDT
-            );
+            await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
           }
 
           if (usdcBalance > 0) {
             console.log(GREEN, 'Buying USDT', RESET);
-            await setLimitOrder(
-              'Usdt',
-              'Usdc',
-              'Buy',
-              PIVOT_PRICE - OFFSET_PRICE,
-              balances.Ethereum.USDC
-            );
+            await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
           }
         } else {
           console.log('Strategy "SELL-STABLECOIN-BASIC" was NOT executed');

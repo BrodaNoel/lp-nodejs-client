@@ -29,18 +29,16 @@ The available strategies are the following.
 ### Strategy: SELL-STABLECOIN-BASIC
 
 - The `SELL-STABLECOIN-BASIC` strategy is the most basic one.
+- Pool: Only USDT/USDC
 - This strategy just check if you have free balance on ETH:USDT or ETH:USDC, and sell it setting a limit-order.
-- The price to sell/buy will depend on 2 vars that you will add in your `.env` file (`STRATEGY_PIVOT_PRICE` and `STRATEGY_OFFSET_PRICE`).
-- The price to SELL USDT (buy USDC) will be defined as `STRATEGY_PIVOT_PRICE + STRATEGY_OFFSET_PRICE`
-- The price to BUY USDT (sell USDC ) will be defined as `STRATEGY_PIVOT_PRICE - STRATEGY_OFFSET_PRICE`
-
-**Example**: If you define `STRATEGY_PIVOT_PRICE=1` and `STRATEGY_OFFSET_PRICE=0.001`, it will SELL USDT at `1.001`, and BUY USDT at `0.999`;
+- The price to SELL USDT (buy USDC) will be defined as `STRATEGY_USDT_SELL_PRICE`
+- The price to BUY USDT (sell USDC) will be defined as `STRATEGY_USDT_BUY_PRICE`
 
 ```bash
 ## The strategy name
 STRATEGY=SELL-STABLECOIN-BASIC
-STRATEGY_PIVOT_PRICE=1
-STRATEGY_OFFSET_PRICE=0.001
+STRATEGY_USDT_SELL_PRICE=1
+STRATEGY_USDT_BUY_PRICE=0.999
 ```
 
 ## Usage
