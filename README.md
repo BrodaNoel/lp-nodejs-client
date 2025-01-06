@@ -35,7 +35,8 @@ The available strategies are the following.
 - The price to BUY USDT (sell USDC) will be defined as `STRATEGY_USDT_BUY_PRICE`
 
 ```bash
-## The strategy name
+## Add this to your .env file
+
 STRATEGY=SELL-STABLECOIN-BASIC
 STRATEGY_USDT_SELL_PRICE=1
 STRATEGY_USDT_BUY_PRICE=0.999
