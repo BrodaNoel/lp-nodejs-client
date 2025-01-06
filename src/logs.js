@@ -1,3 +1,9 @@
+const { tickToPrice, hexQuantityToQuantity } = require('./utils');
+
+const YELLOW = '\x1b[33m';
+const GREEN = '\x1b[32m';
+const RESET = '\x1b[0m';
+
 const logIncorrectAddress = pair => {
   console.error('Incorrect generated ChaninFlip address');
   console.error(
