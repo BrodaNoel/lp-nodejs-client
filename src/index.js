@@ -240,7 +240,7 @@ async function setLimitOrder(base, quote, side, price, amount) {
 
       if (usdcBalance > 0) {
         console.log(GREEN, 'Buying USDT', RESET);
-        await setLimitOrder('Usdt', 'Usdc', 'Buy', 1, balances.Ethereum.USDC);
+        await setLimitOrder('Usdt', 'Usdc', 'Buy', 0.999, balances.Ethereum.USDC);
       }
     } else {
       console.log('Strategy "BASIC" was NOT executed');
