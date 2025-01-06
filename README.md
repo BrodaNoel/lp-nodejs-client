@@ -24,7 +24,7 @@ The available strategies are the following.
 
 > Consider creating an issue asking for new strategies, or creating a PR in case you want to code it yourself. In case you want to create a new issue, please make sure to explain in details how the strategy should works
 
-**Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `pick` closest to your provided price.
+**Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `tick` closest to the price you defined.
 
 ### Strategy: SELL-STABLECOIN-BASIC
 
