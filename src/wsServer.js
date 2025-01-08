@@ -1,5 +1,3 @@
-const { ringBell } = require('./logs');
-
 const WS_RPC = process.env.WS_RPC_URL || 'wss://mainnet-rpc.chainflip.io';
 
 let requestId = 0;
@@ -49,11 +47,7 @@ async function connectWs(callback) {
       // Handle different message types as per your application logic
       if (message.method === 'cf_subscribe_scheduled_swaps') {
         console.log('👂 Event Listened: cf_subscribe_scheduled_swaps');
-
-        if (message.params.result.swaps.length > 0) {
-          ringBell(1);
-          callback(message);
-        }
+        callback(message);
       } else {
         console.log('👂 Event Listened:', message);
       }
@@ -67,10 +61,9 @@ async function connectWs(callback) {
     if (event.code === 1000) {
       console.log(`🏁 ✅ WebSocket closed`);
     } else {
-      console.log(`🏁 WebSocket connection closed: ${event.code} - ${event.reason}`);
+      console.log(`🚨 WebSocket connection closed with error: ${event.code} - ${event.reason}`);
 
       if ([1006].includes(event.code)) {
-        ringBell(3);
         setTimeout(() => {
           console.log('🔃 Reconnecting...');
           connectWs(callback);

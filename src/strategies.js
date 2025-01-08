@@ -1,6 +1,7 @@
 const { hexQuantityToQuantity } = require('./utils');
 const { setLimitOrder, getBalances } = require('./actions');
 const { connectWs } = require('./wsServer');
+const { ringBell } = require('./logs');
 
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
@@ -13,6 +14,8 @@ async function runStrategy(strategy) {
      * STRATEGY: SELL-STABLECOIN-BASIC
      * POOL: USDT/USDC
      * PRICE: Hardcoded in .env: `STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`
+     *
+     * If there is free balance, we sell it.
      */
 
     const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
@@ -31,37 +34,92 @@ async function runStrategy(strategy) {
     const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);
 
     if (usdtBalance > 0 || usdcBalance > 0) {
-      console.log(GREEN, 'Free balance found', RESET);
+      console.log(GREEN, '💰 Free balance found', RESET);
 
       if (usdtBalance > 0) {
-        console.log(GREEN, 'Selling USDT', RESET);
+        console.log(GREEN, '🚀 Selling USDT', RESET);
         await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
       }
 
       if (usdcBalance > 0) {
-        console.log(GREEN, 'Buying USDT', RESET);
+        console.log(GREEN, '🚀 Buying USDT', RESET);
         await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
       }
     } else {
-      console.log('Reason: No free balance available');
+      console.log('😥 No free balance available');
     }
   } else if (strategy === 'SELL-STABLECOIN-BASIC-WS') {
     /**
      * STRATEGY: SELL-STABLECOIN-BASIC-WS
-     * Exactly as SELL-STABLECOIN-BASIC, but will run on WebSockets on each
-     * cf_subscribe_scheduled_swaps event (in case there are swaps on it)
+     * POOL: USDT/USDC
+     * PRICE: Hardcoded in .env: `STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`
+     *
+     * Similar to SELL-STABLECOIN-BASIC, but will run on WebSockets on each
+     * cf_subscribe_scheduled_swaps event (in case there are swaps on it).
+     * If there is a BUY SWAP upcoming, it creates a SELL.
+     * If there is a SELL SWAP upcoming, it creates a BUY.
      */
 
-    function strategySellStableCoinBasicWsListener(/* message */) {
-      // console.log(message.params.result.swaps);
-      // TODO: Here we should actually check if the swap received is trying to buy what we
-      // have on balance. It does not makes sense to set a SELL order if the swap is also selling
-      runStrategy('SELL-STABLECOIN-BASIC');
+    const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
+    const USDT_BUY_PRICE = Number(process.env.STRATEGY_USDT_BUY_PRICE);
+
+    if (!(USDT_SELL_PRICE > 0)) {
+      throw new Error(`STRATEGY_USDT_SELL_PRICE env variable should be > 0`);
+    }
+    if (!(USDT_BUY_PRICE > 0)) {
+      throw new Error(`STRATEGY_USDT_BUY_PRICE env variable should be > 0`);
+    }
+
+    let isProcessingSawp = false;
+    async function strategySellStableCoinBasicWsListener(message) {
+      if (message.params.result.swaps.length === 0) {
+        return;
+      }
+
+      if (isProcessingSawp) {
+        console.log('🛑 Strategy stopped because we are still processing the previous swap');
+        return;
+      }
+
+      isProcessingSawp = true;
+
+      console.log('👀 Swap upcoming detected');
+
+      const swap = message.params.result.swaps[0];
+
+      const balances = await getBalances();
+
+      const usdtBalance = hexQuantityToQuantity(balances.Ethereum.USDT, 6);
+      const usdcBalance = hexQuantityToQuantity(balances.Ethereum.USDC, 6);
+
+      if (swap.side === 'buy') {
+        if (usdtBalance > 0) {
+          ringBell(5);
+          console.log(GREEN, '🚀 Selling USDT', RESET);
+          await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
+          console.log(GREEN, '✅ Sell done', RESET);
+        } else {
+          console.log('😢 No free balance (USDT) available to SELL');
+        }
+      } else if (swap.side === 'sell') {
+        if (usdcBalance > 0) {
+          ringBell(5);
+          console.log(GREEN, '🚀 Buying USDT', RESET);
+          await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
+          console.log(GREEN, '✅ Buy done', RESET);
+        } else {
+          console.log('😢 No free balance (USDC) available to SELL');
+        }
+      } else {
+        throw new Error('🚨 Unknown swap.side');
+      }
+
+      isProcessingSawp = false;
     }
 
     await connectWs(strategySellStableCoinBasicWsListener);
   } else {
-    throw new Error('The strategy defined as STRATEGY in the env file, is not valid');
+    throw new Error('🚨 The strategy defined as STRATEGY in the env file, is not valid');
   }
 }
 
