@@ -14,7 +14,8 @@ A NodeJS client for handling LP
 - Select the network: Polkadot
 - Copy the Public Key, and add it inside the `.env` file, defined as `POLKADOT_PUBLIC_KEY`
 - Export the Private Key, and add it inside the `.env` file, defined as `POLKADOT_SEED`
-- [OPTIONAL] You can define an HTTP_RPC_URL in the `.env` file, otherwise `https://mainnet-rpc.chainflip.io` will be used
+- [OPTIONAL] You can define an `HTTP_RPC_URL` in the `.env` file, otherwise `https://mainnet-rpc.chainflip.io` will be used
+- [OPTIONAL] You can define an `WS_RPC_URL` in the `.env` file, otherwise `wss://mainnet-rpc.chainflip.io` will be used
 - Run `nvm use` (or make sure to use a compatible NodeJS version. Check the `.nvmrc` file)
 - Run `npm i`
 
@@ -32,20 +33,40 @@ The available strategies are the following.
 
 > Consider creating an issue asking for new strategies, or creating a PR in case you want to code it yourself. In case you want to create a new issue, please make sure to explain in details how the strategy should works
 
-**Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `tick` closest to the price you defined.
+**Price Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `tick` closest to the price you defined.
+
+**Strategy Methods**
+It is important to pay attention to the Strategy method. It could be HTTP server, or WebSocket.
+
+- WebSocket method: The bot will subscribe to a websocket method, and will be listening to this until you manually stop the bot. This is usually called "daemon" style.
+- HTTP method: The bot will run a serie of HTTP call in order to run the strategy, and it will stop the bot as soon as it finishes (usually taking less than 5 seconds).
 
 ### Strategy: SELL-STABLECOIN-BASIC
 
 - The `SELL-STABLECOIN-BASIC` strategy is the most basic one.
-- Pool: Only USDT/USDC
+- Pool: Only ETH USDT/USDC
+- Method: HTTP
 - This strategy just check if you have free balance on ETH:USDT or ETH:USDC, and sell it setting a limit-order.
 - The price to SELL USDT (buy USDC) will be defined as `STRATEGY_USDT_SELL_PRICE`
 - The price to BUY USDT (sell USDC) will be defined as `STRATEGY_USDT_BUY_PRICE`
 
 ```bash
 ## Add this to your .env file
-
 STRATEGY=SELL-STABLECOIN-BASIC
+STRATEGY_USDT_SELL_PRICE=1
+STRATEGY_USDT_BUY_PRICE=0.999
+```
+
+### Strategy: SELL-STABLECOIN-BASIC-WS
+
+- Pool: Only ETH USDT/USDC
+- Method: WebSocket
+- The bot will be listening to `cf_subscribe_scheduled_swaps` events, and it will run the `SELL-STABLECOIN-BASIC` strategy as soon as it detects a upcoming swap.
+- Make sure to define the env vars required for `SELL-STABLECOIN-BASIC`
+
+```bash
+## Add this to your .env file
+STRATEGY=SELL-STABLECOIN-BASIC-WS
 STRATEGY_USDT_SELL_PRICE=1
 STRATEGY_USDT_BUY_PRICE=0.999
 ```
