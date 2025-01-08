@@ -48,10 +48,10 @@ async function connectWs(callback) {
 
       // Handle different message types as per your application logic
       if (message.method === 'cf_subscribe_scheduled_swaps') {
-        console.log('👂 Event Listened: cf_subscribe_scheduled_swaps');
+        console.log('👂 Event Listened: cf_subscribe_scheduled_swaps', Date.now());
         callback(message);
       } else {
-        console.log('👂 Event Listened:', message);
+        console.log('👂 Event Listened:', Date.now(), message);
       }
     } catch (err) {
       console.error('🚨 Error parsing message:', err);
