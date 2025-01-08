@@ -95,8 +95,10 @@ async function runStrategy(strategy) {
         if (usdtBalance > 0) {
           ringBell(5);
           console.log(GREEN, '🚀 Selling USDT', RESET);
-          await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
+
           waitForBlocks = 2;
+          await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
+
           console.log(GREEN, '✅ Sell done', RESET);
         } else {
           console.log('😢 No free balance (USDT) available to SELL');
@@ -105,8 +107,10 @@ async function runStrategy(strategy) {
         if (usdcBalance > 0) {
           ringBell(5);
           console.log(GREEN, '🚀 Buying USDT', RESET);
-          await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
+
           waitForBlocks = 2;
+          await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
+
           console.log(GREEN, '✅ Buy done', RESET);
         } else {
           console.log('😢 No free balance (USDC) available to SELL');
