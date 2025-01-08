@@ -1,3 +1,5 @@
+const { ringBell } = require('./logs');
+
 const WS_RPC = process.env.WS_RPC_URL || 'wss://mainnet-rpc.chainflip.io';
 
 let requestId = 0;
@@ -74,6 +76,7 @@ async function connectWs(callback) {
 
   // Event: Error occurred
   ws.onerror = error => {
+    ringBell(2);
     console.error('🚨 WebSocket error:', error.message);
   };
 
@@ -83,6 +86,7 @@ async function connectWs(callback) {
     console.log('Received SIGINT. Closing WebSocket connection.');
 
     if (ws.readyState === WebSocket.OPEN) {
+      ringBell(2);
       ws.close(1000, 'Process terminated'); // 1000 indicates a normal closure
       // process.exit(0);
     }
