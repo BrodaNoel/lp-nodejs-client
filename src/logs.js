@@ -48,7 +48,7 @@ const createError = dispatchErr => {
   );
 };
 
-const wsCallback = async data => {
+async function wsCallback(data) {
   console.log('status.type', data.status.type);
 
   const err = createError(data.dispatchError);
@@ -57,7 +57,15 @@ const wsCallback = async data => {
   }
 
   return data;
-};
+}
+
+function ringBell(times) {
+  for (let i = 0; i < times; i++) {
+    setTimeout(() => {
+      process.stdout.write('\x07');
+    }, 500 * i);
+  }
+}
 
 module.exports = {
   logIncorrectAddress,
@@ -65,4 +73,5 @@ module.exports = {
   logOrder,
   createError,
   wsCallback,
+  ringBell,
 };
