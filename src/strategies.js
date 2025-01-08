@@ -70,15 +70,14 @@ async function runStrategy(strategy) {
       throw new Error(`STRATEGY_USDT_BUY_PRICE env variable should be > 0`);
     }
 
-    let waitForBlocks = 0;
+    let waitAfterBlockNumber = 0;
     async function strategySellStableCoinBasicWsListener(message) {
       if (message.params.result.swaps.length === 0) {
         return;
       }
 
-      if (waitForBlocks > 0) {
-        console.log('🛑 Strategy stopped because we are waiting for more blocks');
-        waitForBlocks--;
+      if (waitAfterBlockNumber > message.params.result.block_number) {
+        console.log(`🛑 Strategy skipped. Waiting for block ${waitAfterBlockNumber}`);
         return;
       }
 
@@ -96,7 +95,7 @@ async function runStrategy(strategy) {
           ringBell(5);
           console.log(GREEN, '🚀 Selling USDT', RESET);
 
-          waitForBlocks = 2;
+          waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
 
           console.log(GREEN, '✅ Sell done', RESET);
@@ -108,7 +107,7 @@ async function runStrategy(strategy) {
           ringBell(5);
           console.log(GREEN, '🚀 Buying USDT', RESET);
 
-          waitForBlocks = 2;
+          waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
 
           console.log(GREEN, '✅ Buy done', RESET);
