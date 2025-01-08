@@ -70,18 +70,17 @@ async function runStrategy(strategy) {
       throw new Error(`STRATEGY_USDT_BUY_PRICE env variable should be > 0`);
     }
 
-    let isProcessingSawp = false;
+    let waitForBlocks = 0;
     async function strategySellStableCoinBasicWsListener(message) {
       if (message.params.result.swaps.length === 0) {
         return;
       }
 
-      if (isProcessingSawp) {
-        console.log('🛑 Strategy stopped because we are still processing the previous swap');
+      if (waitForBlocks > 0) {
+        console.log('🛑 Strategy stopped because we are waiting for more blocks');
+        waitForBlocks--;
         return;
       }
-
-      isProcessingSawp = true;
 
       console.log('👀 Swap upcoming detected');
 
@@ -97,6 +96,7 @@ async function runStrategy(strategy) {
           ringBell(5);
           console.log(GREEN, '🚀 Selling USDT', RESET);
           await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
+          waitForBlocks = 2;
           console.log(GREEN, '✅ Sell done', RESET);
         } else {
           console.log('😢 No free balance (USDT) available to SELL');
@@ -106,6 +106,7 @@ async function runStrategy(strategy) {
           ringBell(5);
           console.log(GREEN, '🚀 Buying USDT', RESET);
           await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
+          waitForBlocks = 2;
           console.log(GREEN, '✅ Buy done', RESET);
         } else {
           console.log('😢 No free balance (USDC) available to SELL');
@@ -113,8 +114,6 @@ async function runStrategy(strategy) {
       } else {
         throw new Error('🚨 Unknown swap.side');
       }
-
-      isProcessingSawp = false;
     }
 
     await connectWs(strategySellStableCoinBasicWsListener);
