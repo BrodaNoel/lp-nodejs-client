@@ -8,12 +8,14 @@ function getNextId() {
   return requestId;
 }
 
+let ws = null;
+
 async function connectWs(callback) {
   if (!callback) {
     throw new Error('🚨Missing callback on connectWs');
   }
 
-  let ws = new WebSocket(WS_RPC);
+  ws = new WebSocket(WS_RPC);
 
   // Event: Connection opened
   ws.onopen = () => {
@@ -82,19 +84,16 @@ async function connectWs(callback) {
     ringBell(2);
     console.error('🚨 WebSocket error:', error.message);
   };
-
-  // TODO: Fix this. This will be assigned to each `ws` object that is going to be created on
-  // each reconnection. How to fix it? Call a `getWs().close(1000)`
-  process.on('SIGINT', () => {
-    console.log('Received SIGINT. Closing WebSocket connection.');
-
-    if (ws.readyState === WebSocket.OPEN) {
-      ringBell(2);
-      ws.close(1000, 'Process terminated'); // 1000 indicates a normal closure
-      // process.exit(0);
-    }
-  });
 }
+
+process.on('SIGINT', () => {
+  console.log('Received SIGINT. Closing WebSocket connection.');
+
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.close(1000, 'Process terminated'); // 1000 indicates a normal closure
+    // process.exit(0);
+  }
+});
 
 module.exports = {
   connectWs,
