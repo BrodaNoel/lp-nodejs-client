@@ -81,6 +81,8 @@ async function runStrategy(strategy) {
         return;
       }
 
+      const i = Date.now();
+
       console.log('👀 Swap upcoming detected');
 
       const swap = message.params.result.swaps[0];
@@ -93,24 +95,24 @@ async function runStrategy(strategy) {
       if (swap.side === 'buy') {
         if (usdtBalance > 0) {
           ringBell(5);
-          console.log(GREEN, '🚀 Selling USDT', RESET);
+          console.log(GREEN, '🚀 Selling USDT', RESET, `(${Date.now() - i})`);
 
           waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
 
-          console.log(GREEN, '✅ Sell done', RESET);
+          console.log(GREEN, '✅ Sell done', RESET, `(${Date.now() - i})`);
         } else {
           console.log('😢 No free balance (USDT) available to SELL');
         }
       } else if (swap.side === 'sell') {
         if (usdcBalance > 0) {
           ringBell(5);
-          console.log(GREEN, '🚀 Buying USDT', RESET);
+          console.log(GREEN, '🚀 Buying USDT', RESET, `(${Date.now() - i})`);
 
           waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
 
-          console.log(GREEN, '✅ Buy done', RESET);
+          console.log(GREEN, '✅ Buy done', RESET, `(${Date.now() - i})`);
         } else {
           console.log('😢 No free balance (USDC) available to SELL');
         }
