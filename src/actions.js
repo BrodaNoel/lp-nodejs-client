@@ -2,7 +2,7 @@ const { Keyring, HttpProvider, ApiPromise } = require('@polkadot/api');
 const { u8aToHex } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
 const { logIncorrectAddress, logIncorrectPublicKey, logLiquidity } = require('./logs');
-const { hexQuantityToQuantity, priceToTick, sqrtPriceToPrice } = require('./utils');
+const { hexQuantityToQuantity, priceToTick, sqrtPriceToPrice, tickToPrice } = require('./utils');
 
 const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
 
@@ -152,9 +152,11 @@ async function getLiquidity() {
   console.log('🏧 LIQUIDITY | ETH:USDT/USDC', `(${Date.now() - i} ms)`);
   console.log('🏧 LIQUIDITY | SELLING');
   liquidity.limit_orders.asks.sort((a, b) => a.tick - b.tick);
+  liquidity.limit_orders.asks.forEach(x => (x.tickPrice = tickToPrice(x.tick, 6, 6)));
   liquidity.limit_orders.asks.forEach(logLiquidity);
   console.log('🏧 LIQUIDITY | BUYING');
   liquidity.limit_orders.bids.sort((a, b) => b.tick - a.tick);
+  liquidity.limit_orders.bids.forEach(x => (x.tickPrice = tickToPrice(x.tick, 6, 6)));
   liquidity.limit_orders.bids.forEach(logLiquidity);
 
   return liquidity;
@@ -190,6 +192,26 @@ async function setLimitOrder(base, quote, side, price, amount) {
   );
 }
 
+/**
+ * side: buy/sell
+ * maxOrMin: float
+ * liquidity: [{ tick: 3, tickPrice: 1.0003000300009999, amount:"0x7b550e7c" }
+ * 1.0003
+ */
+function getPriceFromLiquidity(side, maxOrMin, liquidity) {
+  const price = liquidity.find(x => {
+    if (side === 'buy') {
+      return x.tickPrice <= maxOrMin;
+    } else if (side === 'sell') {
+      return x.tickPrice >= maxOrMin;
+    } else {
+      throw new Error('Incorrect `side` on `getPriceFromLiquidity`');
+    }
+  });
+
+  return price;
+}
+
 module.exports = {
   get,
   getCurrentOrders,
@@ -197,4 +219,5 @@ module.exports = {
   getPrices,
   getLiquidity,
   setLimitOrder,
+  getPriceFromLiquidity,
 };
