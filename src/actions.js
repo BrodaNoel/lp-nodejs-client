@@ -1,7 +1,7 @@
 const { Keyring, HttpProvider, ApiPromise } = require('@polkadot/api');
 const { u8aToHex } = require('@polkadot/util');
 const { cryptoWaitReady } = require('@polkadot/util-crypto');
-const { logIncorrectAddress, logIncorrectPublicKey } = require('./logs');
+const { logIncorrectAddress, logIncorrectPublicKey, logLiquidity } = require('./logs');
 const { hexQuantityToQuantity, priceToTick, sqrtPriceToPrice } = require('./utils');
 
 const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
@@ -79,20 +79,16 @@ async function getCurrentOrders() {
   return get({
     method: 'cf_pool_orders',
     params: {
-      base_asset: {
-        chain: 'Ethereum',
-        asset: 'USDT',
-      },
-      quote_asset: {
-        chain: 'Ethereum',
-        asset: 'USDC',
-      },
+      base_asset: { chain: 'Ethereum', asset: 'USDT' },
+      quote_asset: { chain: 'Ethereum', asset: 'USDC' },
       lp: process.env.OWNER_ADDRESS,
     },
   });
 }
 
 async function getBalances() {
+  const i = Date.now();
+
   console.log('🏦 BALANCES | Getting balances...');
 
   const balances = await get({
@@ -108,33 +104,60 @@ async function getBalances() {
     hexQuantityToQuantity(balances.Ethereum.USDC, 6),
     '| ',
     'ETH:USDT:',
-    hexQuantityToQuantity(balances.Ethereum.USDT, 6)
+    hexQuantityToQuantity(balances.Ethereum.USDT, 6),
+    `(${Date.now() - i} ms)`
   );
 
   return balances;
 }
 
 async function getPrices() {
+  const i = Date.now();
   console.log('💵 PRICES | Getting prices...');
 
   const prices = await get({
     method: 'cf_pool_price_v2',
     params: [
-      { asset: 'USDT', chain: 'Ethereum' },
-      { asset: 'USDC', chain: 'Ethereum' },
+      { chain: 'Ethereum', asset: 'USDT' },
+      { chain: 'Ethereum', asset: 'USDC' },
     ],
   });
 
   console.log(
     '💵 PRICES |',
-    'ETH:USDC BUY:',
+    'ETH:USDT BUY:',
     sqrtPriceToPrice(prices.buy, 6, 6),
     '| ',
-    'ETH:USDC SELL:',
-    sqrtPriceToPrice(prices.sell, 6, 6)
+    'ETH:USDT SELL:',
+    sqrtPriceToPrice(prices.sell, 6, 6),
+    `(${Date.now() - i} ms)`
   );
 
   return prices;
+}
+
+async function getLiquidity() {
+  const i = Date.now();
+
+  console.log('🏧 LIQUIDITY | Getting liquidity...');
+
+  const liquidity = await get({
+    method: 'cf_pool_liquidity',
+    params: {
+      base_asset: { chain: 'Ethereum', asset: 'USDT' },
+      quote_asset: { chain: 'Ethereum', asset: 'USDC' },
+    },
+  });
+
+  console.log('🏧 LIQUIDITY | ETH:USDT/USDC', `(${Date.now() - i} ms)`);
+  console.log('🏧 LIQUIDITY | SELLING');
+  liquidity.limit_orders.asks.sort((a, b) => a.tick - b.tick);
+  liquidity.limit_orders.asks.forEach(logLiquidity);
+  console.log('🏧 LIQUIDITY | BUYING');
+  liquidity.limit_orders.bids.sort((a, b) => b.tick - a.tick);
+  liquidity.limit_orders.bids.forEach(logLiquidity);
+
+  return liquidity;
 }
 
 let lastOrderId = Date.now();
@@ -172,5 +195,6 @@ module.exports = {
   getCurrentOrders,
   getBalances,
   getPrices,
+  getLiquidity,
   setLimitOrder,
 };

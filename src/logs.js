@@ -82,6 +82,16 @@ function logUpcomingSwap(swap) {
   );
 }
 
+function logLiquidity(data) {
+  console.log(
+    YELLOW,
+    `${tickToPrice(data.tick, 6, 6).toFixed(6)} (${data.tick})`,
+    '@',
+    Math.trunc(hexQuantityToQuantity(data.amount, 6)), // Trunc because 1 USDT = 1 USD
+    RESET
+  );
+}
+
 module.exports = {
   logIncorrectAddress,
   logIncorrectPublicKey,
@@ -90,4 +100,5 @@ module.exports = {
   wsCallback,
   ringBell,
   logUpcomingSwap,
+  logLiquidity,
 };
