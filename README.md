@@ -33,7 +33,7 @@ The available strategies are the following.
 
 > Consider creating an issue asking for new strategies, or creating a PR in case you want to code it yourself. In case you want to create a new issue, please make sure to explain in details how the strategy should works
 
-**Price Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `tick` closest to the price you defined.
+**Price Considerations**: Every time you define a `PRICE` in an strategy, remember that this price will actually be transformed to `tick`, so, the buy/sell price will be the `tick` closest to the price you defined. Something important to consider here as well, is for example: If you define a "max price of 1.0003", maybe the tick is `1.0003000300009999`, which is similar to `1.0003`, but it is bigger than that, so your price will be set to the following tick, which may be something like `1.00020001`. So, I would suggest to check the prices in CHaninflip UI first, and get the prices from there, and setting `1.0003000300009999` instead of `1.0003` in the `.env` vars
 
 **Strategy Methods**
 It is important to pay attention to the Strategy method. It could be HTTP server, or WebSocket.
