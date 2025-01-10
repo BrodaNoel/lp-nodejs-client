@@ -83,9 +83,15 @@ async function runStrategy(strategy) {
 
       const i = Date.now();
 
-      console.log('👀 Swap upcoming detected');
-
       const swap = message.params.result.swaps[0];
+
+      console.log(
+        GREEN,
+        '👀 Swap upcoming detected |',
+        swap.side === 'buy' ? 'BUYING' : 'SELLING',
+        hexQuantityToQuantity(swap.amount, 6),
+        RESET
+      );
 
       const balances = await getBalances();
 
