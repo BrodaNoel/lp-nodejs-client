@@ -6,6 +6,9 @@ const { hexQuantityToQuantity, priceToTick, sqrtPriceToPrice } = require('./util
 
 const HTTP_RPC = process.env.HTTP_RPC_URL || 'https://mainnet-rpc.chainflip.io';
 
+const GREEN = '\x1b[32m';
+const RESET = '\x1b[0m';
+
 let httpApi;
 async function getHttpServer() {
   if (httpApi) {
@@ -140,6 +143,10 @@ async function setLimitOrder(base, quote, side, price, amount) {
     throw new Error('Pool not implemented. Currently only USDT/USDC is implemented');
   }
 
+  const i = Date.now();
+
+  console.log(GREEN, side === 'Sell' ? '🚀 Selling USDT' : '🚀 Buying USDT', RESET);
+
   const api = await getHttpServer();
   const pair = await getPair();
 
@@ -151,6 +158,13 @@ async function setLimitOrder(base, quote, side, price, amount) {
   await api.tx.liquidityPools
     .setLimitOrder(base, quote, side, orderId, tick, sellAmount)
     .signAndSend(pair);
+
+  console.log(
+    GREEN,
+    side === 'Sell' ? '✅ Sell done' : '✅ Buy done',
+    RESET,
+    `(${Date.now() - i} ms)`
+  );
 }
 
 module.exports = {

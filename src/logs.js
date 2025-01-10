@@ -1,3 +1,4 @@
+const { u8aToHex } = require('@polkadot/util');
 const { tickToPrice, hexQuantityToQuantity } = require('./utils');
 
 const YELLOW = '\x1b[33m';
@@ -67,6 +68,20 @@ function ringBell(times) {
   }
 }
 
+function logUpcomingSwap(swap) {
+  console.log(
+    GREEN,
+    '👀 Swap upcoming detected |',
+    swap.swap_id,
+    swap.swap_request_id,
+    swap.side === 'buy' ? 'BUYING' : 'SELLING',
+    hexQuantityToQuantity(swap.amount, 6),
+    `| In block ${swap.execute_at}`,
+    `| Remaining Chunks: ${swap.remaining_chunks}`,
+    RESET
+  );
+}
+
 module.exports = {
   logIncorrectAddress,
   logIncorrectPublicKey,
@@ -74,4 +89,5 @@ module.exports = {
   createError,
   wsCallback,
   ringBell,
+  logUpcomingSwap,
 };

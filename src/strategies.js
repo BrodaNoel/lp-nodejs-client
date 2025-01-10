@@ -1,7 +1,7 @@
 const { hexQuantityToQuantity } = require('./utils');
 const { setLimitOrder, getBalances } = require('./actions');
 const { connectWs } = require('./wsServer');
-const { ringBell } = require('./logs');
+const { ringBell, logUpcomingSwap } = require('./logs');
 
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
@@ -81,17 +81,9 @@ async function runStrategy(strategy) {
         return;
       }
 
-      const i = Date.now();
-
       const swap = message.params.result.swaps[0];
 
-      console.log(
-        GREEN,
-        '👀 Swap upcoming detected |',
-        swap.side === 'buy' ? 'BUYING' : 'SELLING',
-        hexQuantityToQuantity(swap.amount, 6),
-        RESET
-      );
+      logUpcomingSwap(swap);
 
       const balances = await getBalances();
 
@@ -101,24 +93,18 @@ async function runStrategy(strategy) {
       if (swap.side === 'buy') {
         if (usdtBalance > 0) {
           ringBell(5);
-          console.log(GREEN, '🚀 Selling USDT', RESET, `(${Date.now() - i})`);
 
           waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Sell', USDT_SELL_PRICE, balances.Ethereum.USDT);
-
-          console.log(GREEN, '✅ Sell done', RESET, `(${Date.now() - i})`);
         } else {
           console.log('😢 No free balance (USDT) available to SELL');
         }
       } else if (swap.side === 'sell') {
         if (usdcBalance > 0) {
           ringBell(5);
-          console.log(GREEN, '🚀 Buying USDT', RESET, `(${Date.now() - i})`);
 
           waitAfterBlockNumber = swap.execute_at;
           await setLimitOrder('Usdt', 'Usdc', 'Buy', USDT_BUY_PRICE, balances.Ethereum.USDC);
-
-          console.log(GREEN, '✅ Buy done', RESET, `(${Date.now() - i})`);
         } else {
           console.log('😢 No free balance (USDC) available to SELL');
         }
