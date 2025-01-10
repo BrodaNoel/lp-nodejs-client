@@ -62,7 +62,7 @@ STRATEGY_USDT_BUY_PRICE=0.999
 - Pool: Only ETH USDT/USDC
 - Method: WebSocket
 - The bot will be listening to `cf_subscribe_scheduled_swaps` events ("new swap coming" event), and it will run a similar strategy like `SELL-STABLECOIN-BASIC` strategy, as soon as it detects a upcoming swap. Basically, if a new SELL swap is coming, it will create a BUY limit-order in case that you have some free balance available. Same thing if a new BUY swap is coming (it will create a SELL limit-order with your free balance).
-- Make sure to define the env vars required for `SELL-STABLECOIN-BASIC`, in order to properly set the prices you want to set.
+- Make sure to define the env vars required (`STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`), in order to properly set the prices you want to set.
 
 ```bash
 ## Add this to your .env file

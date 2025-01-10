@@ -54,10 +54,8 @@ async function runStrategy(strategy) {
      * POOL: USDT/USDC
      * PRICE: Hardcoded in .env: `STRATEGY_USDT_SELL_PRICE` and `STRATEGY_USDT_BUY_PRICE`
      *
-     * Similar to SELL-STABLECOIN-BASIC, but will run on WebSockets on each
-     * cf_subscribe_scheduled_swaps event (in case there are swaps on it).
-     * If there is a BUY SWAP upcoming, it creates a SELL.
-     * If there is a SELL SWAP upcoming, it creates a BUY.
+     * It will run on WebSockets on each cf_subscribe_scheduled_swaps event
+     * If there is a BUY or SELL SWAP upcoming, it creates a LIMIT-ORDER with a hardcoded price.
      */
 
     const USDT_SELL_PRICE = Number(process.env.STRATEGY_USDT_SELL_PRICE);
