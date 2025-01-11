@@ -1,6 +1,7 @@
 const { u8aToHex } = require('@polkadot/util');
 const { tickToPrice, hexQuantityToQuantity } = require('./utils');
 
+const RED = '\x1b[31m';
 const YELLOW = '\x1b[33m';
 const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
@@ -76,8 +77,10 @@ function logUpcomingSwap(swap) {
     swap.swap_request_id,
     swap.side === 'buy' ? 'BUYING' : 'SELLING',
     hexQuantityToQuantity(swap.amount, 6),
-    `| In block ${swap.execute_at}`,
-    `| Remaining Chunks: ${swap.remaining_chunks}`,
+    '| In block',
+    swap.execute_at,
+    '| Remaining Chunks:',
+    swap.remaining_chunks,
     RESET
   );
 }
@@ -87,7 +90,26 @@ function logLiquidity(data) {
     YELLOW,
     `${data.tickPrice.toFixed(6)} (${data.tick})`,
     '@',
-    Math.trunc(hexQuantityToQuantity(data.amount, 6)), // Trunc because 1 USDT = 1 USD
+    Math.trunc(data.amountNumber),
+    RESET
+  );
+}
+
+function logBestOffer(side, yourOffer, bestOffer) {
+  console.log(
+    side === 'buy'
+      ? yourOffer >= bestOffer.tickPrice
+        ? GREEN
+        : RED
+      : yourOffer <= bestOffer.tickPrice
+      ? GREEN
+      : RED,
+    `You want to ${side} @`,
+    yourOffer,
+    'and the best offert is @',
+    bestOffer.tickPrice,
+    'with volume:',
+    bestOffer.amountNumber,
     RESET
   );
 }
@@ -101,4 +123,5 @@ module.exports = {
   ringBell,
   logUpcomingSwap,
   logLiquidity,
+  logBestOffer,
 };
