@@ -150,13 +150,26 @@ async function getLiquidity() {
   });
 
   console.log('🏧 LIQUIDITY | ETH:USDT/USDC', `(${Date.now() - i} ms)`);
-  console.log('🏧 LIQUIDITY | SELLING');
+
+  // clearn asks
+  liquidity.limit_orders.asks.forEach(x => {
+    x.tickPrice = tickToPrice(x.tick, 6, 6);
+    x.amountNumber = hexQuantityToQuantity(x.amount, 6);
+  });
+  liquidity.limit_orders.asks = liquidity.limit_orders.asks.filter(x => x.amountNumber >= 1);
   liquidity.limit_orders.asks.sort((a, b) => a.tick - b.tick);
-  liquidity.limit_orders.asks.forEach(x => (x.tickPrice = tickToPrice(x.tick, 6, 6)));
+
+  // clear bids
+  liquidity.limit_orders.bids.forEach(x => {
+    x.tickPrice = tickToPrice(x.tick, 6, 6);
+    x.amountNumber = hexQuantityToQuantity(x.amount, 6);
+  });
+  liquidity.limit_orders.bids = liquidity.limit_orders.bids.filter(x => x.amountNumber >= 1);
+  liquidity.limit_orders.bids.sort((a, b) => b.tick - a.tick);
+
+  console.log('🏧 LIQUIDITY | SELLING');
   liquidity.limit_orders.asks.forEach(logLiquidity);
   console.log('🏧 LIQUIDITY | BUYING');
-  liquidity.limit_orders.bids.sort((a, b) => b.tick - a.tick);
-  liquidity.limit_orders.bids.forEach(x => (x.tickPrice = tickToPrice(x.tick, 6, 6)));
   liquidity.limit_orders.bids.forEach(logLiquidity);
 
   return liquidity;
@@ -170,7 +183,7 @@ async function setLimitOrder(base, quote, side, price, amount) {
 
   const i = Date.now();
 
-  console.log(GREEN, side === 'Sell' ? '🚀 Selling USDT' : '🚀 Buying USDT', RESET);
+  console.log(GREEN, side === 'Sell' ? '🚀 Selling USDT' : '🚀 Buying USDT', `@ ${price}`, RESET);
 
   const api = await getHttpServer();
   const pair = await getPair();
