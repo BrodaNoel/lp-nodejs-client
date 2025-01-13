@@ -11,22 +11,22 @@ const RESET = '\x1b[0m';
 
 let httpApi;
 async function getHttpServer(attempt = 0) {
-try {
-  if (httpApi) {
+  try {
+    if (httpApi) {
+      await httpApi.isReady;
+      return httpApi;
+    }
+
+    const provider = new HttpProvider(HTTP_RPC);
+
+    httpApi = new ApiPromise({ provider, noInitWarn: true });
+
+    console.log('Connecting to the HTTP server...');
     await httpApi.isReady;
+    console.log('Connected');
+
     return httpApi;
-  }
-
-  const provider = new HttpProvider(HTTP_RPC);
-
-  httpApi = new ApiPromise({ provider, noInitWarn: true });
-
-  console.log('Connecting to the HTTP server...');
-  await httpApi.isReady;
-  console.log('Connected');
-
-  return httpApi;
-} catch (error) {
+  } catch (error) {
     console.error(`Failed attempt ${attempt} to connect to HTTP server: ${error.message}`);
 
     if (attempt >= 3) {
@@ -235,6 +235,45 @@ function getPriceFromLiquidity(side, maxOrMin, liquidity) {
   return price;
 }
 
+async function closeAllOpenedPositions() {
+  const i = Date.now();
+
+  const currentOrders = await getCurrentOrders();
+
+  const orders = [
+    ...currentOrders.limit_orders.asks.map(x => ({
+      Limit: {
+        id: x.id,
+        baseAsset: 'Usdt',
+        quoteAsset: 'Usdc',
+        side: 'Sell',
+      },
+    })),
+    ...currentOrders.limit_orders.bids.map(x => ({
+      Limit: {
+        id: x.id,
+        baseAsset: 'Usdt',
+        quoteAsset: 'Usdc',
+        side: 'Buy',
+      },
+    })),
+  ];
+
+  if (orders.length > 0) {
+    const api = await getHttpServer();
+    const pair = await getPair();
+
+    await api.tx.liquidityPools.cancelOrdersBatch(orders).signAndSend(pair);
+  }
+
+  console.log(
+    GREEN,
+    orders.length > 0 ? `✅ All positions closed (${orders.length})` : 'No positions to close',
+    RESET,
+    `(${Date.now() - i} ms)`
+  );
+}
+
 module.exports = {
   get,
   getCurrentOrders,
@@ -243,4 +282,5 @@ module.exports = {
   getLiquidity,
   setLimitOrder,
   getPriceFromLiquidity,
+  closeAllOpenedPositions,
 };
