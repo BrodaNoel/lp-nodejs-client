@@ -10,7 +10,8 @@ const GREEN = '\x1b[32m';
 const RESET = '\x1b[0m';
 
 let httpApi;
-async function getHttpServer() {
+async function getHttpServer(attempt = 0) {
+try {
   if (httpApi) {
     await httpApi.isReady;
     return httpApi;
@@ -20,11 +21,20 @@ async function getHttpServer() {
 
   httpApi = new ApiPromise({ provider, noInitWarn: true });
 
-  console.log('Connecting to the RPC...');
+  console.log('Connecting to the HTTP server...');
   await httpApi.isReady;
   console.log('Connected');
 
   return httpApi;
+} catch (error) {
+    console.error(`Failed attempt ${attempt} to connect to HTTP server: ${error.message}`);
+
+    if (attempt >= 3) {
+      throw new Error('Too many attempts (3) to connect to HTTP Server: ' + error.message);
+    }
+
+    return await getHttpServer(attempt + 1);
+  }
 }
 
 let pair;
