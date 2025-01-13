@@ -96,14 +96,15 @@ function logLiquidity(data) {
 }
 
 function logBestOffer(side, yourOffer, bestOffer) {
+  const isMineBest =
+    side === 'buy' ? yourOffer >= bestOffer.tickPrice : yourOffer <= bestOffer.tickPrice;
+
+  if (isMineBest) {
+    ringBell(4);
+  }
+
   console.log(
-    side === 'buy'
-      ? yourOffer >= bestOffer.tickPrice
-        ? GREEN
-        : RED
-      : yourOffer <= bestOffer.tickPrice
-      ? GREEN
-      : RED,
+    isMineBest ? GREEN : RED,
     `You want to ${side} @`,
     yourOffer,
     'and the best offert is @',
