@@ -21,9 +21,13 @@ async function getHttpServer(attempt = 0) {
 
     httpApi = new ApiPromise({ provider, noInitWarn: true });
 
+    const i = Date.now();
+
     console.log('Connecting to the HTTP server...');
+
     await httpApi.isReady;
-    console.log('Connected');
+
+    console.log('Connected', `(${Date.now() - i} ms)`);
 
     return httpApi;
   } catch (error) {
@@ -275,6 +279,8 @@ async function closeAllOpenedPositions() {
 }
 
 module.exports = {
+getHttpServer,
+  getPair,
   get,
   getCurrentOrders,
   getBalances,
