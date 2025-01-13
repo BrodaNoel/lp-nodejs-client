@@ -100,7 +100,7 @@ function logBestOffer(side, yourOffer, bestOffer) {
     side === 'buy' ? yourOffer >= bestOffer.tickPrice : yourOffer <= bestOffer.tickPrice;
 
   if (isMineBest) {
-    ringBell(4);
+    ringBell(2);
   }
 
   console.log(
