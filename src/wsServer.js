@@ -89,7 +89,7 @@ async function connectWs(callback) {
 process.on('SIGINT', () => {
   console.log('Received SIGINT. Closing WebSocket connection.');
 
-  if (ws.readyState === WebSocket.OPEN) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
     ws.close(1000, 'Process terminated'); // 1000 indicates a normal closure
     // process.exit(0);
   }
