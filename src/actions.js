@@ -37,6 +37,7 @@ async function getHttpServer(attempt = 0) {
       throw new Error('Too many attempts (3) to connect to HTTP Server: ' + error.message);
     }
 
+    httpApi = null;
     return await getHttpServer(attempt + 1);
   }
 }
@@ -46,6 +47,8 @@ async function getPair() {
   if (pair) {
     return pair;
   }
+
+  const i = Date.now();
 
   await cryptoWaitReady();
 
@@ -61,6 +64,8 @@ async function getPair() {
     logIncorrectPublicKey(pair);
     throw new Error('Incorrect public key');
   }
+
+  console.log('Pair generated', `(${Date.now() - i} ms)`);
 
   return pair;
 }
@@ -100,17 +105,20 @@ async function getCurrentOrders() {
   });
 }
 
+let balancesCache = null;
 async function getBalances() {
   const i = Date.now();
 
   console.log('🏦 BALANCES | Getting balances...');
 
-  const balances = await get({
-    method: 'cf_asset_balances',
-    params: {
-      account_id: process.env.OWNER_ADDRESS,
-    },
-  });
+  const balances = balancesCache
+    ? balancesCache
+    : await get({
+        method: 'cf_asset_balances',
+        params: {
+          account_id: process.env.OWNER_ADDRESS,
+        },
+      });
 
   console.log(
     '🏦 BALANCES |',
@@ -170,16 +178,20 @@ async function getLiquidity() {
     x.tickPrice = tickToPrice(x.tick, 6, 6);
     x.amountNumber = hexQuantityToQuantity(x.amount, 6);
   });
-  liquidity.limit_orders.asks = liquidity.limit_orders.asks.filter(x => x.amountNumber >= 1);
   liquidity.limit_orders.asks.sort((a, b) => a.tick - b.tick);
+  liquidity.limit_orders.asks = liquidity.limit_orders.asks
+    .filter(x => x.amountNumber >= 1)
+    .slice(0, 5);
 
   // clear bids
   liquidity.limit_orders.bids.forEach(x => {
     x.tickPrice = tickToPrice(x.tick, 6, 6);
     x.amountNumber = hexQuantityToQuantity(x.amount, 6);
   });
-  liquidity.limit_orders.bids = liquidity.limit_orders.bids.filter(x => x.amountNumber >= 1);
   liquidity.limit_orders.bids.sort((a, b) => b.tick - a.tick);
+  liquidity.limit_orders.bids = liquidity.limit_orders.bids
+    .filter(x => x.amountNumber >= 1)
+    .slice(0, 5);
 
   console.log('🏧 LIQUIDITY | SELLING');
   liquidity.limit_orders.asks.forEach(logLiquidity);
@@ -207,9 +219,11 @@ async function setLimitOrder(base, quote, side, price, amount) {
   const tick = priceToTick(price, 6, 6).toString();
   const sellAmount = BigInt(amount);
 
+  balancesCache = null;
   await api.tx.liquidityPools
     .setLimitOrder(base, quote, side, orderId, tick, sellAmount)
     .signAndSend(pair);
+  balancesCache = null;
 
   console.log(
     GREEN,
@@ -267,7 +281,9 @@ async function closeAllOpenedPositions() {
     const api = await getHttpServer();
     const pair = await getPair();
 
+    balancesCache = null;
     await api.tx.liquidityPools.cancelOrdersBatch(orders).signAndSend(pair);
+    balancesCache = null;
   }
 
   console.log(
@@ -279,7 +295,7 @@ async function closeAllOpenedPositions() {
 }
 
 module.exports = {
-getHttpServer,
+  getHttpServer,
   getPair,
   get,
   getCurrentOrders,
